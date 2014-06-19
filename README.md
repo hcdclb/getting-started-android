@@ -27,7 +27,7 @@ Create a new Android Application called "Jumpstart" using Eclipse
 #### Generate the Mobile APIs
 You can generate the mobile API by running the following command on the Mobile App Builder tool:
 
-    jumpstart@local:mab> api-generate android
+    jumpstart@local:mab> api-generate -wf android
     
 This command would generate the mobile API in the following directory: `~/MABProjects/jumpstart/mobile/apis/assets/android`
     
@@ -36,9 +36,11 @@ You can copy the generated mobile assets to your Android project directory by ru
     
     jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnetapi/* </path/to/MyProject/src/com/magnetapi>
     
+    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnet/* </path/to/MyProject/src/com/magnet>
+    
     jumpstart@local:mab> exec cp ~/MABProjects/jumpstart/mobile/apis/assets/android/*beans*.jar </path/to/MyProject/libs>
     
-    jumpstart@local:mab> exec cp ~/MABProjects/jumpstart/mobile/apis/assets/android/magnet_type_mapper.xml </path/to/MyProject/assets>
+    jumpstart@local:mab> exec cp ~/MABProjects/jumpstart/mobile/apis/assets/android/magnet_type_mapper.xml </path/to/MyProject/res/xml>
 
 #### Import Mobile Server SDK as library project to Eclipse
 Create the Magnet library as an "Android Library" project and include it in your Android app as a dependency:
@@ -72,29 +74,36 @@ To call the HelloWorld controller API, follow these steps:
     // Get instance of connection configuration manager
     ConnectionConfigManager cm = magnetClient.getManager(ConnectionConfigManager.class, this);
     
-    // Retrieve connection configuration for the backend from
+    // Retrieve connection configuration named "jumpstart" from
     // assets/connection_configs.xml
-    // TODO If no configuration, create one
+    // If no configuration, create one
+    // hostUrl = URL to the jumpstart backend. If the backend is running locally,
+    // set to "http://10.0.2.2:8080/rest" for app running on the Android emulator
     ConnectionConfig connConfig = cm.getConnectionConfig("jumpstart");
+    if (connConfig == null) {
+          String hostUrl = "http://10.0.2.2:8080/rest";
+          connConfig = cm.addOrReplaceConnectionConfig("jumpstart", 
+          Uri.parse(hostUrl),
+          ConfigType.MAGNET_REST, MagnetRestAuthHandler.class, "magnet");
+    }
 
 ###### Initialize the HelloWorldController controller
 
-      try {
-        // instantiate controller factory
-		HelloWorldControllerFactory cf = new HelloWorldControllerFactory(magnetClient);
-		  
-		// get an instance of the controller
-        HelloWorldController hwController = cf.obtainInstance("jumpstart");
-      } catch (SchemaException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
+     try {
+       // instantiate controller factory
+	HelloWorldControllerFactory cf = new HelloWorldControllerFactory(magnetClient);
+	  
+	// get an instance of the controller
+       HelloWorldController hwController = cf.obtainInstance("jumpstart");
+     } catch (SchemaException e) {
+	   Log.e(LOG_TAG, "can't get HelloWorldController", e);
+     }
     
 ###### Call the HelloWorldController controller
 
-      Call<String> call = hwController.postHello(input, new AsyncCallOptions());
-	  // blocks until response is returned
-	  String response = call.get();
+     Call<String> call = hwController.postHello("Magnet", new AsyncCallOptions());
+     // blocks until response is returned
+     String response = call.get();
 
 #### Call the SimpleEntity controller API
 
@@ -102,115 +111,155 @@ The SimpleEntity controller API provides basic operations like create, read, upd
 
 To call the SimpleEntity controller API, follow these steps:
 
-###### Import the SimpleEntityController and SimpleEntityControllerFactory classes
+###### Import the SimpleEntityController and SimpleEntityBean related classes
     
-    import com.magnetapi.apps.jumpstart.controllers.helloworld.api.SimpleEntityController;
-    import com.magnetapi.apps.jumpstart.controllers.helloworld.api.SimpleEntityControllerFactory;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.SimpleEntityController;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.SimpleEntityControllerFactory;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleEntityBean;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleEntityBeanBuilder;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleValueBeanBuilder;
     
 ###### Initialize the SimpleEntityController controller
 
-      try {
-        // instantiate controller factory
-		SimpleEntityControllerFactory ef = new SimpleEntityControllerFactory(magnetClient);
-		  
-		// get an instance of the controller
-        SimpleEntityController entityController = ef.obtainInstance("jumpstart");
-      } catch (SchemaException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
+     try {
+       // instantiate controller factory
+	SimpleEntityControllerFactory ef = new SimpleEntityControllerFactory(magnetClient);
+	  
+	// get an instance of the controller
+       SimpleEntityController entityController = ef.obtainInstance("jumpstart");
+     } catch (SchemaException e) {
+   	Log.e(LOG_TAG, "can't get HelloWorldController", e);
+     }
     
 ###### Call the SimpleEntityController controller
 
     // Initialize a SimpleEntityBean using the generated SimpleEntityBeanBuilder class
     SimpleEntityBeanBuilder builder = new SimpleEntityBeanBuilder();
-    builder.name("John Appleseed").customerId(100);
+    builder.name("John Smith")
+           .customerId(100);
     
-    // Initialize a SimpleValueBean using the generated SimpleValueBeanBuilder class
-    SimpleValueBeanBuilder valueBuilder = new SimpleValueBeanBuilder();
-    valueBuilder.bigDecimal(BigDecimal.TEN);  // workaround since this column is not nullable
-    valueBuilder.character("c");
-    valueBuilder._boolean(false);
-    simpleEntityBean.value = simpleValueBean;
-  
-    // set value of SimpleValueBean
-    builder.value(valueBuilder.build());
+    // create a SimpleValueBean, set its string value
+    SimpleValueBeanBuilder svb = new SimpleValueBeanBuilder();
+    svb.string("simple value string");
     
-    // Call the controller to create the SimpleEntityBean using null as async options
+    // set SimpleValueBean instance to SimpleEntityBean "value" field
+    builder.value(svb.build());      
+
+    // Call the controller to create the SimpleEntity using null as async options
     Call<Integer> call = entityController.create(builder.build(), null);
     Integer id = call.get();
 
 #### Putting it together
 You can call the HelloWorld and SimpleEntity controller APIs by adding the code below to `HelloWorldActivity`:
 
-Note: this code is strictly for demonstration purpose. Controller calls should not be invoked from onCreate() method as it incurrs a network request.
+Note: this code is strictly for demonstration purpose.
 
-	import com.magnet.android.mms.MagnetMobileClient;
-	import com.magnet.android.mms.async.AsyncCallOptions;
-	import com.magnet.android.mms.async.Call;
-	import com.magnet.android.mms.connection.ConnectionConfigManager;
-	import com.magnet.android.mms.connection.ConnectionConfigManager.ConnectionConfig;
-	import com.magnet.android.mms.exception.SchemaException;
-	import com.magnetapi.apps.jumpstart.controllers.helloworld.api.HelloWorldController;
-    import com.magnetapi.apps.jumpstart.controllers.helloworld.api.HelloWorldControllerFactory
-	import com.magnetapi.apps.jumpstart.controllers.helloworld.api.SimpleEntityController;
-    import com.magnetapi.apps.jumpstart.controllers.helloworld.api.SimpleEntityControllerFactory;
-    public class HelloWorldActivity extends Activity {
-    private static final String LOG_TAG = HelloWorldActivity.class.getSimpleName();
-    private MagnetMobileClient magnetClient;
-    private HelloWorldController hwController;  // for Hello World controller
+
+    package com.magnet.apps.jumpstart;
     
-    protected void onCreate(Bundle savedInstanceState) {
+    import java.util.concurrent.ExecutionException;
+    import android.app.Activity;
+    import android.net.Uri;
+    import android.os.Bundle;
+    
+    import com.magnet.android.mms.MagnetMobileClient;
+    import com.magnet.android.mms.async.AsyncCallOptions;
+    import com.magnet.android.mms.async.Call;
+    import com.magnet.android.mms.connection.ConnectionConfigManager;
+    import com.magnet.android.mms.connection.ConnectionConfigManager.ConnectionConfig;
+    import com.magnet.android.mms.connection.ConnectionConfigManager.ConnectionConfig.ConfigType;
+    import com.magnet.android.mms.connection.MagnetRestAuthHandler;
+    import com.magnet.android.mms.exception.SchemaException;
+    import com.magnet.android.mms.utils.logger.Log;
+    
+    // generated from "api-generate" mab command
+    import com.magnetapi.apps.jumpstart.controllers.helloworld.api.HelloWorldController;
+    import com.magnetapi.apps.jumpstart.controllers.helloworld.api.HelloWorldControllerFactory;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.SimpleEntityController;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.SimpleEntityControllerFactory;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleEntityBeanBuilder;
+    import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleValueBeanBuilder;
+    
+    public class HelloJumpstart extends Activity {
+    	private static final String LOG_TAG = HelloWorldActivity.class.getSimpleName();
+    	private MagnetMobileClient magnetClient;
+    	
+    	protected void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
-
-    	setContentView(R.layout.hello_world_activity);
 
     	// initialize MagnetMobileClient
     	magnetClient = MagnetMobileClient.getInstance(getApplicationContext());
+    	// Get instance of connection configuration manager
+    	ConnectionConfigManager cm = magnetClient.getManager(
+        	ConnectionConfigManager.class, this);
 
-      	HelloWorldControllerFactory cf = new HelloWorldControllerFactory(magnetClient);
-      	ConnectionConfigManager cm = magnetClient.getManager(ConnectionConfigManager.class, this);
-      	ConnectionConfig connConfig = cm.getConnectionConfig("jumpstart");
-      	try {
-        	if (connConfig != null) {
-          		hwController = cf.obtainInstance("jumpstart");
-     			Call<String> call = hwController.postHello(input, new AsyncCallOptions());
-	  			// blocks until response is returned
-	  			// *** Strictly for demonstration purpose and should not be in onCreate() method as it waits for network request to complete
-	  			String response = call.get();
+    	// set connection configuration
+    	ConnectionConfig connConfig = cm.getConnectionConfig("jumpstart");
+    	if (connConfig == null) {
+      		String hostUrl = "http://10.0.2.2:8080/rest";
+      		connConfig = cm.addOrReplaceConnectionConfig("jumpstart",
+          		Uri.parse(hostUrl), ConfigType.MAGNET_REST,
+          	MagnetRestAuthHandler.class, "magnet");
+    	}
+    	try {
+      		// instantiate controller factory
+      		HelloWorldControllerFactory cf = new HelloWorldControllerFactory(
+          		magnetClient);
 
-        		// instantiate controller factory
-				SimpleEntityControllerFactory ef = new SimpleEntityControllerFactory(magnetClient);
-		  
-				// get an instance of the controller
-        		SimpleEntityController entityController = ef.obtainInstance("jumpstart");
-    			// Initialize a SimpleEntityBean
-    			SimpleEntityBeanBuilder builder = new SimpleEntityBeanBuilder();
-    			builder.name("John Appleseed").customerId(100);
-    
-    			// Initialize a SimpleValueBean
-    			SimpleValueBeanBuilder valueBuilder = new SimpleValueBeanBuilder();
-    			valueBuilder.bigDecimal(BigDecimal.TEN);  // workaround since this column is not nullable
-    			valueBuilder.character("c");
-    			valueBuilder._boolean(false);
-    			simpleEntityBean.value = simpleValueBean;
-  
-    			// set value of SimpleValueBean
-    			builder.value(valueBuilder.build());
-    
-    			// Call the controller to create the SimpleEntityBean using null as async options
-    			Call<Integer> call = entityController.create(builder.build(), null);
-	  			// blocks until response is returned
-	  			// *** Strictly for demonstration purpose and should not be in onCreate() method as it waits for network request to complete
+	      // get an instance of the controller
+	      HelloWorldController hwController = cf.obtainInstance("jumpstart");
+	      Call<String> call = hwController.postHello("Magnet",
+	          new AsyncCallOptions());
+	      // blocks until response is returned
+	      // *** Strictly for demonstration purpose and should not be in onCreate()
+	      // method because 'get' is a blocking call, waiting for network request to
+	      // complete
+	      String response = call.get();
+	    } catch (SchemaException e) {
+	      Log.e(LOG_TAG, "can't get HelloWorldController", e);
+	    } catch (ExecutionException e) {
+	      Log.e(LOG_TAG, "failed to execute postHello", e);
+	      e.printStackTrace();
+	    } catch (InterruptedException e) {
+	      Log.e(LOG_TAG, "postHello interrupted", e);
+	    }
 
-    			Integer id = call.get();
-        	}
-      	} catch (SchemaException e) {
-        	// TODO Auto-generated catch block
-        	Log.e(LOG_TAG, "failed to get instance of the controller");
-        }
-      }
-    }
+	    try {
+	      // instantiate controller factory
+	      SimpleEntityControllerFactory ef = new SimpleEntityControllerFactory(
+	          magnetClient);
+	
+	      // get an instance of the controller
+	      SimpleEntityController entityController = ef.obtainInstance("jumpstart");
+	
+	      // Initialize a SimpleEntityBean using the generated
+	      // SimpleEntityBeanBuilder class
+	      SimpleEntityBeanBuilder builder = new SimpleEntityBeanBuilder();
+	      builder.name("John Smith").customerId(100);
+	
+	      // create a SimpleValueBean, set its string value
+	      SimpleValueBeanBuilder svb = new SimpleValueBeanBuilder();
+	      svb.string("simple value string");
+	
+	      // set SimpleValueBean instance to SimpleEntityBean "value" field
+	      builder.value(svb.build());
+	
+	      // Call the controller to create the SimpleEntity using null as async
+	      // options
+	      Call<Integer> call = entityController.create(builder.build(), null);
+	      // blocks until response is returned
+	      Integer id = call.get();
+	
+	    } catch (SchemaException e) {
+	      Log.e(LOG_TAG, "failed to get instance of the controller");
+	    } catch (ExecutionException e) {
+	      Log.e(LOG_TAG, "failed to execute create entity", e);
+	    } catch (InterruptedException e) {
+	      Log.e(LOG_TAG, "create entity interrupted", e);
+	    }
+	  }
+	}
+
 
 
 ###6. Deploy the Mobile Backend
@@ -219,7 +268,7 @@ You can deploy the Mobile Backend server for the Jumpstart app to your local mac
     jumpstart@local:mab> server-start
     
 ###7. Run the app
-You are now ready to run the Jumpstart app on the iOS simulator using Xcode!
+You are now ready to run the Jumpstart app on the Android device!
 
 ###8. Where To Go From Here?
 You can download the completed project from [here](https://someurl.git) or clone this project using git:
