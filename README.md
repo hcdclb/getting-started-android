@@ -150,7 +150,7 @@ To call the SimpleEntity controller API, follow these steps:
     Integer id = call.get();
 
 #### Putting it together
-You can call the HelloWorld and SimpleEntity controller APIs by adding the code below to `HelloWorldActivity`:
+You can call the HelloWorld and SimpleEntity controller APIs by adding the code below to `JumpstartActivity`:
 
 Note: this code is strictly for demonstration purpose.
 
@@ -180,7 +180,7 @@ Note: this code is strictly for demonstration purpose.
     import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleEntityBeanBuilder;
     import com.magnetapi.apps.jumpstart.controllers.simplecontroller.api.bean.SimpleValueBeanBuilder;
     
-    public class HelloJumpstart extends Activity {
+    public class JumpstartActivity extends Activity {
     	private static final String LOG_TAG = HelloWorldActivity.class.getSimpleName();
     	private MagnetMobileClient magnetClient;
     	
