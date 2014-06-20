@@ -34,9 +34,13 @@ This command would generate the mobile API in the following directory: `~/MABPro
 #### Copy the Mobile APIs and Configuration files
 You can copy the generated mobile assets to your Android project directory by running the following command on the Mobile App Builder tool:
     
-    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnetapi/* </path/to/MyProject/src/com/magnetapi>
+    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnetapi/apps </path/to/MyProject/src/com/magnetapi>
     
-    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnet/* </path/to/MyProject/src/com/magnet>
+    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnet/login </path/to/MyProject/src/com/magnet>
+    
+    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnet/notification </path/to/MyProject/src/com/magnet>
+    
+    jumpstart@local:mab> exec cp -R ~/MABProjects/jumpstart/mobile/apis/assets/android/com/magnet/user </path/to/MyProject/src/com/magnet>
     
     jumpstart@local:mab> exec cp ~/MABProjects/jumpstart/mobile/apis/assets/android/*beans*.jar </path/to/MyProject/libs>
     
